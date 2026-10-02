@@ -1,0 +1,92 @@
+{
+  "expo": {
+    "name": "Hirly",
+    "slug": "hirly",
+    "scheme": "hirly",
+    "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080A12"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.hirly.app",
+      "buildNumber": "1",
+      "associatedDomains": [
+        "applinks:hirly.app",
+        "applinks:www.hirly.app"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#080A12"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.hirly.app",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "hirly.app",
+              "pathPrefix": "/v"
+            },
+            {
+              "scheme": "https",
+              "host": "www.hirly.app",
+              "pathPrefix": "/v"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-localization",
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent"
+        }
+      ],
+      "@sentry/react-native"
+    ],
+    "extra": {
+      "hirlyEnvironment": "development",
+      "eas": {
+        "projectId": "3a659d05-73ae-4f5b-8f2a-12d0009be8b2"
+      }
+    },
+    "owner": "rocha74"
+  }
+}

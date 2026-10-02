@@ -1,0 +1,12 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="360" rx="32" fill="#080A12"/>
+  <rect x="82" y="78" width="204" height="204" rx="48" fill="#7482FF"/>
+  <path d="M82 236C82 261 103 282 128 282H240C265 282 286 261 286 236V250H82V236Z" fill="#AC7CFF"/>
+  <path d="M138 235V125" stroke="#080A12" stroke-width="25" stroke-linecap="round"/>
+  <path d="M138 180H188C219 180 238 199 238 230V235" stroke="#080A12" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M238 125V235" stroke="#080A12" stroke-width="25" stroke-linecap="round"/>
+  <circle cx="240" cy="114" r="11" fill="#D9C7FF"/>
+  <text x="340" y="222" fill="#F5F7FF" font-family="Geist, Inter, Arial, sans-serif" font-size="124" font-weight="800">hirly</text>
+  <circle cx="646" cy="210" r="11" fill="#AC7CFF"/>
+  <text x="344" y="268" fill="#AEB5CC" font-family="Geist, Inter, Arial, sans-serif" font-size="24" font-weight="500">Seu próximo começo.</text>
+</svg>

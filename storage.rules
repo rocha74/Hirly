@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId
+        && (!firestore.exists(/databases/(default)/documents/accountLifecycle/$(userId))
+          || firestore.get(/databases/(default)/documents/accountLifecycle/$(userId)).data.state == 'active');
+    }
+
+    function validCvWrite(userId) {
+      return isOwner(userId)
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+    }
+
+    match /users/{userId}/cv.pdf {
+      allow read: if isOwner(userId);
+      allow create: if validCvWrite(userId);
+      allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/cv/{fileName} {
+      allow read: if isOwner(userId);
+      allow create: if fileName.matches('^[A-Za-z0-9-]+[.]pdf$')
+        && validCvWrite(userId);
+      allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/attachments/{fileName} {
+      allow read: if isOwner(userId);
+      allow create: if fileName.matches('^[A-Za-z0-9-]+[.]pdf$')
+        && validCvWrite(userId);
+      allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

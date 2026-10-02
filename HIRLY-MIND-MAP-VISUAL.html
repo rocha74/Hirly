@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mapa Mental Hirly</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #030208;
+        --panel: #100d19;
+        --panel-2: #171321;
+        --line: #4b4269;
+        --text: #f7f3ff;
+        --muted: #bdb4d6;
+        --cyan: #20dff2;
+        --purple: #735cff;
+        --blue: #3b82f6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .topbar {
+        position: fixed;
+        z-index: 20;
+        top: 18px;
+        left: 18px;
+        right: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        pointer-events: none;
+      }
+
+      .title {
+        pointer-events: auto;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+
+      .title p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .controls {
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid #2b2440;
+        border-radius: 18px;
+        background: rgba(16, 13, 25, 0.84);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      button {
+        height: 34px;
+        border: 1px solid #3a3156;
+        border-radius: 11px;
+        padding: 0 12px;
+        color: var(--text);
+        background: #171321;
+        font: 700 12px/1 Inter, ui-sans-serif, system-ui;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: var(--cyan);
+      }
+
+      .viewport {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        cursor: grab;
+      }
+
+      .viewport.dragging {
+        cursor: grabbing;
+      }
+
+      .stage {
+        position: absolute;
+        width: 1800px;
+        height: 1200px;
+        transform-origin: 0 0;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(32, 223, 242, 0.08), transparent 34%),
+          radial-gradient(circle at 20% 20%, rgba(115, 92, 255, 0.13), transparent 26%),
+          radial-gradient(circle at 86% 72%, rgba(59, 130, 246, 0.1), transparent 28%),
+          #030208;
+      }
+
+      .connections {
+        position: absolute;
+        inset: 0;
+        width: 1800px;
+        height: 1200px;
+        pointer-events: none;
+      }
+
+      .connections path {
+        fill: none;
+        stroke: var(--line);
+        stroke-width: 3;
+        opacity: 0.64;
+        transition: opacity 160ms ease, stroke 160ms ease, stroke-width 160ms ease;
+      }
+
+      .connections path.active {
+        opacity: 1;
+        stroke: var(--cyan);
+        stroke-width: 5;
+      }
+
+      .node {
+        position: absolute;
+        width: 390px;
+        min-height: 204px;
+        padding: 26px 28px;
+        border: 1px solid #2d2642;
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(23, 19, 33, 0.98), rgba(12, 9, 19, 0.98));
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.38);
+        transition: border-color 160ms ease, opacity 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+      }
+
+      .node:hover,
+      .node.active {
+        border-color: rgba(32, 223, 242, 0.9);
+        transform: translateY(-3px);
+        box-shadow: 0 30px 90px rgba(32, 223, 242, 0.16);
+      }
+
+      .node.dimmed {
+        opacity: 0.32;
+      }
+
+      .node h2 {
+        margin: 0 0 16px;
+        font-size: 26px;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      .node p {
+        margin: 9px 0;
+        color: #d8d1ef;
+        font-size: 17px;
+        line-height: 1.25;
+        font-weight: 560;
+      }
+
+      .node small {
+        display: block;
+        margin-bottom: 12px;
+        color: #8f86aa;
+        font: 750 12px/1.2 "JetBrains Mono", Menlo, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .core {
+        left: 735px;
+        top: 500px;
+        width: 330px;
+        min-height: 170px;
+        padding: 30px;
+        text-align: center;
+        border: 0;
+        background: linear-gradient(135deg, var(--purple), var(--blue) 52%, var(--cyan));
+        box-shadow: 0 34px 110px rgba(32, 223, 242, 0.22);
+      }
+
+      .core h2 {
+        font-size: 50px;
+        margin-bottom: 10px;
+      }
+
+      .core p {
+        color: #ffffff;
+      }
+
+      .pipeline {
+        left: 500px;
+        top: 330px;
+        width: 800px;
+        min-height: 120px;
+        padding: 24px 28px;
+        border-color: #322b49;
+        background: rgba(11, 7, 20, 0.94);
+      }
+
+      .pipeline p {
+        color: #f7f3ff;
+        font: 750 17px/1.7 "JetBrains Mono", Menlo, monospace;
+      }
+
+      .product { left: 80px; top: 115px; }
+      .user { left: 540px; top: 70px; width: 360px; }
+      .jobs { left: 1010px; top: 75px; width: 440px; }
+      .feed { left: 1330px; top: 390px; width: 410px; }
+      .applications { left: 1275px; top: 805px; width: 430px; }
+      .ai { left: 720px; top: 910px; width: 420px; }
+      .agents { left: 250px; top: 905px; width: 440px; }
+      .ops { left: 80px; top: 500px; width: 410px; }
+
+      .mini-map {
+        position: fixed;
+        z-index: 15;
+        left: 18px;
+        bottom: 18px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        width: min(780px, calc(100vw - 36px));
+        padding: 10px;
+        border: 1px solid #2b2440;
+        border-radius: 18px;
+        background: rgba(16, 13, 25, 0.84);
+        backdrop-filter: blur(18px);
+      }
+
+      .mini-map button {
+        height: 32px;
+      }
+
+      .hint {
+        position: fixed;
+        right: 20px;
+        bottom: 24px;
+        z-index: 15;
+        color: #8f86aa;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="title">
+        <h1>Mapa mental do Hirly</h1>
+        <p>Arraste para navegar. Clique em um setor para destacar conexões.</p>
+      </div>
+      <div class="controls">
+        <button data-action="zoom-out">-</button>
+        <button data-action="reset">Ver tudo</button>
+        <button data-action="zoom-in">+</button>
+      </div>
+    </div>
+
+    <div class="viewport" id="viewport">
+      <div class="stage" id="stage">
+        <svg class="connections" viewBox="0 0 1800 1200" aria-hidden="true">
+          <defs>
+            <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="strokeWidth">
+              <path d="M2 2L10 6L2 10" stroke="#20DFF2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <path data-from="core" data-to="product" marker-end="url(#arrow)" d="M735 558C610 455 465 335 470 240"/>
+          <path data-from="core" data-to="user" marker-end="url(#arrow)" d="M820 500C770 404 745 316 720 280"/>
+          <path data-from="core" data-to="jobs" marker-end="url(#arrow)" d="M982 500C1066 405 1134 305 1168 305"/>
+          <path data-from="core" data-to="feed" marker-end="url(#arrow)" d="M1065 585C1180 555 1265 505 1330 482"/>
+          <path data-from="core" data-to="applications" marker-end="url(#arrow)" d="M1038 670C1145 735 1232 812 1275 900"/>
+          <path data-from="core" data-to="ai" marker-end="url(#arrow)" d="M930 670C920 760 915 842 930 910"/>
+          <path data-from="core" data-to="agents" marker-end="url(#arrow)" d="M790 670C690 760 590 840 530 905"/>
+          <path data-from="core" data-to="ops" marker-end="url(#arrow)" d="M735 620C640 625 545 625 490 620"/>
+          <path data-from="core" data-to="pipeline" marker-end="url(#arrow)" d="M900 500C900 478 900 466 900 450"/>
+          <path data-from="jobs" data-to="feed" marker-end="url(#arrow)" d="M1340 305C1420 330 1475 358 1510 390"/>
+          <path data-from="feed" data-to="applications" marker-end="url(#arrow)" d="M1530 620C1545 700 1525 760 1495 805"/>
+          <path data-from="ai" data-to="agents" marker-end="url(#arrow)" d="M720 1010C650 1006 600 1002 690 1000"/>
+          <path data-from="ops" data-to="agents" marker-end="url(#arrow)" d="M270 740C300 815 340 872 385 905"/>
+          <path data-from="pipeline" data-to="ai" marker-end="url(#arrow)" d="M1080 450C1185 580 1160 760 1035 910"/>
+        </svg>
+
+        <section class="node core" data-id="core">
+          <h2>Hirly</h2>
+          <p>carreira inicial com IA confiável</p>
+          <small>feed • match • cv • candidatura</small>
+        </section>
+
+        <section class="node product" data-id="product">
+          <small>proposta</small>
+          <h2>Produto</h2>
+          <p>App mobile para estágio, trainee e primeiro emprego.</p>
+          <p>Promessa: achar vaga boa rápido e entender o próximo passo.</p>
+          <p>Diferencial: feed vertical, match auditável e IA explicável.</p>
+        </section>
+
+        <section class="node user" data-id="user">
+          <small>jornada</small>
+          <h2>Usuário</h2>
+          <p>Onboarding, upload de CV e revisão dos dados extraídos.</p>
+          <p>Perfil com skills, interesses, preferências e confiabilidade.</p>
+          <p>Feed, curtidas, aplicações e tracker.</p>
+        </section>
+
+        <section class="node jobs" data-id="jobs">
+          <small>operação de vagas</small>
+          <h2>Vagas + Admin</h2>
+          <p>Vaga estruturada: empresa, cargo, salário, requisitos e link.</p>
+          <p>Admin revisa duplicatas, campos ausentes e risco.</p>
+          <p>Publicar, pausar, rejeitar ou expirar.</p>
+        </section>
+
+        <section class="node feed" data-id="feed">
+          <small>descoberta</small>
+          <h2>Feed + Match</h2>
+          <p>Swipe vertical, filtros e card de vaga.</p>
+          <p>Ranking por match, confiabilidade, frescor e diversidade.</p>
+          <p>IA explica depois do score determinístico.</p>
+        </section>
+
+        <section class="node applications" data-id="applications">
+          <small>ação</small>
+          <h2>Candidatura</h2>
+          <p>Plano de candidatura, readiness score e tarefas.</p>
+          <p>Pitch, fit analysis, mock interview e aplicação externa.</p>
+          <p>Estado só muda com confirmação.</p>
+        </section>
+
+        <section class="node ai" data-id="ai">
+          <small>qualidade</small>
+          <h2>IA Confiável</h2>
+          <p>IA estrutura e explica. Sistema valida e calcula.</p>
+          <p>Evidence, confidence, reliability e evals.</p>
+          <p>Embeddings e RAG entram depois da base limpa.</p>
+        </section>
+
+        <section class="node agents" data-id="agents">
+          <small>orquestração</small>
+          <h2>Agentes + Tools</h2>
+          <p>Agente de candidatura, CV, admin, descoberta e entrevista.</p>
+          <p>Tools pequenas, seguras, com permissão e confirmação.</p>
+          <p>Produção: migrar writes/admin para backend.</p>
+        </section>
+
+        <section class="node ops" data-id="ops">
+          <small>sustentação</small>
+          <h2>Operação</h2>
+          <p>Logs, custo, latência, cache e fallbacks.</p>
+          <p>Termos, privacidade, consentimento e PII.</p>
+          <p>Deep links, push, crash reporting e loja.</p>
+        </section>
+
+        <section class="node pipeline" data-id="pipeline">
+          <small>ordem das dependências</small>
+          <p>Schemas → Normalização → Evidence → Reliability → Match → IA Explicável → Evals → Embeddings → RAG → Agentes</p>
+        </section>
+      </div>
+    </div>
+
+    <nav class="mini-map" aria-label="Focar setor">
+      <button data-focus="core">Centro</button>
+      <button data-focus="product">Produto</button>
+      <button data-focus="user">Usuário</button>
+      <button data-focus="jobs">Vagas</button>
+      <button data-focus="feed">Feed</button>
+      <button data-focus="applications">Candidatura</button>
+      <button data-focus="ai">IA</button>
+      <button data-focus="agents">Agentes</button>
+      <button data-focus="ops">Operação</button>
+      <button data-focus="pipeline">Dependências</button>
+    </nav>
+    <div class="hint">scroll = zoom • arraste = navegar</div>
+
+    <script>
+      const viewport = document.getElementById('viewport');
+      const stage = document.getElementById('stage');
+      const nodes = [...document.querySelectorAll('.node')];
+      const paths = [...document.querySelectorAll('.connections path')];
+      let scale = 0.62;
+      let x = 80;
+      let y = 90;
+      let dragging = false;
+      let startX = 0;
+      let startY = 0;
+      let originX = 0;
+      let originY = 0;
+
+      const applyTransform = () => {
+        stage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      };
+
+      const reset = () => {
+        const vw = viewport.clientWidth;
+        const vh = viewport.clientHeight;
+        scale = Math.min((vw - 80) / 1800, (vh - 130) / 1200, 0.72);
+        x = Math.max(28, (vw - 1800 * scale) / 2);
+        y = Math.max(72, (vh - 1200 * scale) / 2);
+        applyTransform();
+      };
+
+      const focusNode = (id) => {
+        const node = document.querySelector(`[data-id="${id}"]`);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const stageRect = stage.getBoundingClientRect();
+        const nodeX = (rect.left - stageRect.left) / scale;
+        const nodeY = (rect.top - stageRect.top) / scale;
+        const nodeW = rect.width / scale;
+        const nodeH = rect.height / scale;
+        scale = id === 'core' ? 0.92 : 0.86;
+        x = viewport.clientWidth / 2 - (nodeX + nodeW / 2) * scale;
+        y = viewport.clientHeight / 2 - (nodeY + nodeH / 2) * scale;
+        applyTransform();
+        highlight(id);
+      };
+
+      const highlight = (id) => {
+        const linked = new Set([id]);
+        paths.forEach((path) => {
+          const active = path.dataset.from === id || path.dataset.to === id;
+          path.classList.toggle('active', active);
+          if (active) {
+            linked.add(path.dataset.from);
+            linked.add(path.dataset.to);
+          }
+        });
+        nodes.forEach((node) => {
+          const active = node.dataset.id === id;
+          node.classList.toggle('active', active);
+          node.classList.toggle('dimmed', !linked.has(node.dataset.id));
+        });
+      };
+
+      viewport.addEventListener('pointerdown', (event) => {
+        dragging = true;
+        viewport.classList.add('dragging');
+        startX = event.clientX;
+        startY = event.clientY;
+        originX = x;
+        originY = y;
+        viewport.setPointerCapture(event.pointerId);
+      });
+
+      viewport.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        x = originX + event.clientX - startX;
+        y = originY + event.clientY - startY;
+        applyTransform();
+      });
+
+      viewport.addEventListener('pointerup', () => {
+        dragging = false;
+        viewport.classList.remove('dragging');
+      });
+
+      viewport.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const prev = scale;
+        const next = Math.max(0.38, Math.min(1.2, scale + (event.deltaY < 0 ? 0.06 : -0.06)));
+        const ratio = next / prev;
+        x = event.clientX - (event.clientX - x) * ratio;
+        y = event.clientY - (event.clientY - y) * ratio;
+        scale = next;
+        applyTransform();
+      }, { passive: false });
+
+      document.querySelector('[data-action="zoom-in"]').addEventListener('click', () => {
+        scale = Math.min(1.2, scale + 0.08);
+        applyTransform();
+      });
+
+      document.querySelector('[data-action="zoom-out"]').addEventListener('click', () => {
+        scale = Math.max(0.38, scale - 0.08);
+        applyTransform();
+      });
+
+      document.querySelector('[data-action="reset"]').addEventListener('click', () => {
+        nodes.forEach((node) => node.classList.remove('active', 'dimmed'));
+        paths.forEach((path) => path.classList.remove('active'));
+        reset();
+      });
+
+      document.querySelectorAll('[data-focus]').forEach((button) => {
+        button.addEventListener('click', () => focusNode(button.dataset.focus));
+      });
+
+      nodes.forEach((node) => {
+        node.addEventListener('click', (event) => {
+          event.stopPropagation();
+          highlight(node.dataset.id);
+        });
+      });
+
+      window.addEventListener('resize', reset);
+      reset();
+    </script>
+  </body>
+</html>

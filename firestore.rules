@@ -1,0 +1,334 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() {
+      return request.auth != null
+        && (!exists(/databases/$(database)/documents/accountLifecycle/$(request.auth.uid))
+          || get(/databases/$(database)/documents/accountLifecycle/$(request.auth.uid)).data.state == 'active');
+    }
+
+    function isOwner(uid) {
+      return isAuthed() && request.auth.uid == uid;
+    }
+
+    // Admin = existe doc em admins/{uid}. Usado pra liberar escrita em /jobs.
+    function isAdmin() {
+      return isAuthed() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function validApplyPreferences(data, userId) {
+      return data.keys().hasOnly([
+          'candidateId', 'targetRoles', 'areaIds', 'seniorities', 'locationIds',
+          'workModeIds', 'minimumSalary', 'availability', 'contractTypeIds',
+          'preferredCompanies', 'blockedCompanies', 'hardRequirements',
+          'minimumMatchScore', 'maximumDailyRecommendations', 'schemaVersion',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'candidateId', 'targetRoles', 'areaIds', 'seniorities', 'locationIds',
+          'workModeIds', 'minimumSalary', 'availability', 'contractTypeIds',
+          'preferredCompanies', 'blockedCompanies', 'hardRequirements',
+          'minimumMatchScore', 'maximumDailyRecommendations', 'schemaVersion',
+          'createdAt', 'updatedAt'
+        ])
+        && data.candidateId == userId
+        && data.candidateId is string && data.candidateId.size() > 0
+        && data.candidateId.size() <= 128
+        && data.schemaVersion == '2026-07-31'
+        && data.targetRoles is list && data.targetRoles.size() <= 20
+        && data.areaIds is list && data.areaIds.size() <= 12
+        && data.areaIds.toSet().hasOnly([
+          'technology_engineering', 'data_analytics', 'design_creative',
+          'marketing_advertising', 'business_sales', 'finance_accounting',
+          'legal_compliance', 'people_hr', 'health_medicine', 'education', 'other'
+        ])
+        && data.seniorities is list && data.seniorities.size() <= 6
+        && data.seniorities.toSet().hasOnly([
+          'apprentice', 'intern', 'trainee', 'entry_level', 'junior'
+        ])
+        && data.locationIds is list && data.locationIds.size() <= 20
+        && data.workModeIds is list && data.workModeIds.size() <= 3
+        && data.workModeIds.toSet().hasOnly(['remote', 'hybrid', 'onsite'])
+        && (data.minimumSalary == null || (data.minimumSalary is number
+          && data.minimumSalary >= 0 && data.minimumSalary <= 10000000))
+        && data.availability in [
+          'immediate', 'within_15_days', 'within_30_days', 'after_30_days',
+          'negotiable', 'unknown'
+        ]
+        && data.contractTypeIds is list && data.contractTypeIds.size() <= 6
+        && data.contractTypeIds.toSet().hasOnly([
+          'internship', 'trainee', 'employment', 'contractor', 'apprentice', 'freelance'
+        ])
+        && data.preferredCompanies is list && data.preferredCompanies.size() <= 50
+        && data.blockedCompanies is list && data.blockedCompanies.size() <= 50
+        && data.hardRequirements is list && data.hardRequirements.size() <= 30
+        && data.minimumMatchScore is int
+        && data.minimumMatchScore >= 0 && data.minimumMatchScore <= 100
+        && data.maximumDailyRecommendations is int
+        && data.maximumDailyRecommendations >= 1
+        && data.maximumDailyRecommendations <= 20
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function validDailyRecommendations(data, userId) {
+      return data.keys().hasOnly([
+          'candidateId', 'date', 'recommendations', 'diagnostics',
+          'generatorVersion', 'schemaVersion', 'generatedAtMs', 'cachedAt'
+        ])
+        && data.keys().hasAll([
+          'candidateId', 'date', 'recommendations', 'diagnostics',
+          'generatorVersion', 'schemaVersion', 'generatedAtMs', 'cachedAt'
+        ])
+        && data.candidateId == userId
+        && data.date is string
+        && data.date.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
+        && data.recommendations is list
+        && data.recommendations.size() <= 20
+        && data.diagnostics is map
+        && data.generatorVersion == 'deterministic-triage-v1'
+        && data.schemaVersion == 'daily-recommendations-v1'
+        && data.generatedAtMs is number
+        && data.generatedAtMs > 0
+        && data.cachedAt is timestamp;
+    }
+
+    function validJobPublicationState(data) {
+      return data.status == 'live' || data.isActive == true
+        ? data.keys().hasAll([
+            'title', 'company', 'applyUrl', 'location', 'city', 'state', 'country',
+            'workMode', 'contractType', 'description', 'requiredSkills', 'areaId',
+            'source', 'sourceUrl', 'publishedAt', 'lastVerifiedAt',
+            'verificationStatus', 'status', 'isActive', 'curationStatus'
+          ])
+          && data.status == 'live'
+          && data.isActive == true
+          && data.verificationStatus == 'verified'
+          && data.curationStatus == 'approved'
+          && data.title is string && data.title.size() >= 5
+          && data.company is string && data.company.size() >= 2
+          && data.applyUrl is string && data.applyUrl.matches('https://.+')
+          && data.sourceUrl is string && data.sourceUrl.matches('https?://.+')
+          && data.requiredSkills is list && data.requiredSkills.size() > 0
+        : data.isActive == false;
+    }
+
+    match /accountLifecycle/{uid} {
+      allow read, write: if false;
+    }
+
+    // ---------- Perfil do usuário e subcoleções privadas ----------
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Document checks and immutable snapshots are server-generated only.
+      match /documentValidations/{documentId} {
+        allow read, write: if false;
+      }
+
+      match /documentSnapshots/{documentId} {
+        allow read, write: if false;
+      }
+
+      // Compatibilidade explícita com as subcoleções anteriores ao Hirly Apply.
+      // Mantê-las enumeradas evita que uma coleção nova herde escrita irrestrita.
+      match /{legacyCollection}/{documentId} {
+        allow read, write: if isOwner(userId) && legacyCollection in [
+          'likes', 'interactions', 'applications', 'shares', 'views', 'insights',
+          'fit', 'pitches', 'explanations', 'coach', 'applicationPlans',
+          'jobSummaries',
+          'matchImprovement', 'praHoje', 'hiddenJobs', 'pitchDrafts', 'events',
+          'interviewPrep', 'scheduledAlerts', 'reminders'
+        ];
+      }
+
+      // Preferências são editáveis pelo candidato, mas vinculadas ao UID e a um
+      // contrato estrito. Timestamps de escrita são sempre autoritativos.
+      match /applyPreferences/{preferenceId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && preferenceId == 'current'
+          && validApplyPreferences(request.resource.data, userId)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if isOwner(userId)
+          && preferenceId == 'current'
+          && validApplyPreferences(request.resource.data, userId)
+          && request.resource.data.candidateId == resource.data.candidateId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if isOwner(userId) && preferenceId == 'current';
+      }
+
+      // A seleção é um cache derivado e não concede autoridade sobre pacotes,
+      // fila ou candidaturas. O cliente só pode manter o próprio documento diário.
+      match /jobRecommendations/{recommendationId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && recommendationId == 'today'
+          && validDailyRecommendations(request.resource.data, userId)
+          && request.resource.data.cachedAt == request.time;
+        allow delete: if isOwner(userId) && recommendationId == 'today';
+      }
+
+      // Pacotes, respostas, fila, operações e sessões têm estado controlado pelo
+      // backend. O Admin SDK escreve; o candidato lê somente os próprios dados.
+      match /applicationPackages/{packageId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+
+        match /{document=**} {
+          allow read: if isOwner(userId);
+          allow write: if false;
+        }
+      }
+
+      match /applicationQueue/{queueItemId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /externalApplicationSessions/{sessionId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /applyOperations/{operationId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      // Formulário bruto, consentimento imutável e tentativa de envio são
+      // exclusivos do backend. O app recebe somente uma projeção sem payload,
+      // respostas, paths privados ou erro interno.
+      match /providerApplicationForms/{formId} {
+        allow read, write: if false;
+      }
+
+      match /applicationConsents/{consentId} {
+        allow read, write: if false;
+      }
+
+      match /applicationSubmissionAttempts/{attemptId} {
+        allow read, write: if false;
+      }
+
+      match /applicationSubmissionProjections/{projectionId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      // Canal de e-mail: autoridade exclusiva do backend, inclusive aprovação.
+      match /emailApplicationDrafts/{recordId} {
+        allow read, write: if false;
+      }
+      match /emailApplicationConsents/{recordId} {
+        allow read, write: if false;
+      }
+      match /emailApplicationAttempts/{recordId} {
+        allow read, write: if false;
+      }
+
+      match /emailApplicationProjections/{projectionId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      // Memória profissional reutilizável é publicada somente pelo backend
+      // após aprovação explícita. O candidato lê a própria memória, nunca a de outro usuário.
+      match /professionalFacts/{factId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /approvedAnswers/{answerId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+    }
+
+    match /emailApplicationRoutes/{jobId} {
+      allow read, write: if false;
+    }
+
+    // ---------- Vagas ----------
+    // Leitura: qualquer autenticado. Escrita (criar/editar/apagar): só admins.
+    match /jobs/{jobId} {
+      allow read: if isAdmin() || (isAuthed()
+        && resource.data.status == 'live'
+        && resource.data.isActive == true
+        && resource.data.verificationStatus == 'verified'
+        && resource.data.curationStatus == 'approved');
+      allow create, update: if isAdmin() && validJobPublicationState(request.resource.data);
+      allow delete: if isAdmin();
+
+      // Meta global gerenciado apenas pelo Admin SDK. O cliente pode consumir
+      // um cache existente, mas nunca publicar conteúdo compartilhado.
+      match /meta/{metaId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+
+      // Denúncias de vaga — usuário escreve a sua, lê só a própria.
+      match /reports/{reporterId} {
+        allow read: if isOwner(reporterId);
+        allow write: if false;
+      }
+    }
+
+    // ---------- Reports globais (fila de moderação) ----------
+    // A callable idempotente cria; só admin lê/gerencia a fila.
+    match /reports/{reportId} {
+      allow create: if false;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Feedback do beta: o candidato apenas cria um registro validado. O texto
+    // nunca e usado em analytics e somente admins podem consultar/moderar.
+    match /feedback/{feedbackId} {
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'rating', 'category', 'text', 'sourceScreen', 'allowContact',
+          'appVersion', 'platform', 'status', 'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.category in [
+          'irrelevant_job', 'wrong_information', 'broken_link', 'bad_match',
+          'technical_problem', 'suggestion', 'other'
+        ]
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.sourceScreen is string
+        && request.resource.data.sourceScreen.size() <= 64
+        && request.resource.data.allowContact is bool
+        && request.resource.data.appVersion is string
+        && request.resource.data.appVersion.size() <= 32
+        && request.resource.data.platform in ['ios', 'android', 'web']
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- Admins ----------
+    // Cada um lê só o próprio doc (pra useIsAdmin funcionar). Escrita só
+    // pelo console Firebase — nunca pelo cliente.
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // Contadores e auditoria de IA sao exclusivos do Admin SDK.
+    match /aiQuotas/{uid}/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /aiEvents/{eventId} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "hirly-functions",
+  "description": "Cloud Functions do Hirly — proxy seguro da Anthropic",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^5.1.1",
+    "pdf-lib": "1.17.1"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  },
+  "private": true
+}
