@@ -1,0 +1,22 @@
+{
+  "locale": "pt-BR",
+  "productName": "Hirly",
+  "apple": {
+    "subtitle": "Vagas para seu começo",
+    "promotionalText": "Descubra vagas relevantes, entenda sua compatibilidade e organize candidaturas com você no controle.",
+    "keywords": "vagas,estágio,trainee,primeiro emprego,carreira,currículo,candidatura",
+    "primaryCategory": "BUSINESS",
+    "secondaryCategory": "PRODUCTIVITY"
+  },
+  "google": {
+    "title": "Hirly",
+    "shortDescription": "Vagas para começar, com compatibilidade explicada e candidaturas organizadas.",
+    "category": "BUSINESS"
+  },
+  "fullDescription": "A Hirly ajuda estudantes, recém-formados e pessoas em início de carreira a encontrar oportunidades que fazem sentido para seu momento.\n\nVocê pode:\n• descobrir vagas selecionadas conforme suas preferências;\n• entender os principais motivos e riscos da compatibilidade;\n• salvar ou recusar oportunidades;\n• preparar e revisar materiais de candidatura;\n• abrir o site oficial da vaga com respostas e currículo à mão;\n• registrar e acompanhar o resultado da candidatura.\n\nO currículo é opcional. Quando você autoriza a análise por IA, revisa as informações extraídas antes de salvar. A Hirly não inventa experiências e não envia a candidatura final sem sua ação. Vagas externas podem mudar ou expirar; confirme os dados no site da empresa.",
+  "privacyUrl": "https://hirly.app/privacidade.html",
+  "supportUrl": "https://hirly.app/suporte.html",
+  "accountDeletionUrl": "https://hirly.app/excluir-conta.html",
+  "marketingUrl": "https://hirly.app/",
+  "reviewNotes": "O app usa login próprio por e-mail e senha. Fornecer uma conta de revisão ativa com perfil concluído e currículo fictício, além de pelo menos três vagas verificadas. A candidatura final ocorre em site externo e exige ação explícita do usuário. Nenhuma candidatura é enviada automaticamente."
+}
